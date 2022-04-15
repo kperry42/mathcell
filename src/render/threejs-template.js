@@ -1,6 +1,11 @@
 
 function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
+  const pathToCDN = (config.useCDN
+    ? "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build"
+    : "packages/cdn"
+  );
+
   return `
 <!DOCTYPE html>
 <html>
@@ -17,7 +22,7 @@ function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
 <body>
 
-<script src="https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build/three.min.js"></script>
+<script src="${pathToCDN}/three.min.js"></script>
 
 <script>
 
@@ -414,6 +419,7 @@ function addSurface( s ) {
       group.name = s.options.group;
       scene.add( group );
     }
+    mesh.position.sub(group.position);
     group.add( mesh );
 
     if ( mesh.userData.rotateOnAxis ) {
@@ -421,6 +427,9 @@ function addSurface( s ) {
       group.userData.rotateOnAxis = true;
       group.userData.axis = mesh.userData.axis;
       group.userData.angle = mesh.userData.angle;
+
+      const shift = mesh.position.clone().sub(group.position);
+      group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
     }
 
   } else scene.add( mesh );
