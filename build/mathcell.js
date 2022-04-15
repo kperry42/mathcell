@@ -1,4 +1,9 @@
 
+export {
+  MathCell, interact, graphic, generateId,
+  checkLimits, getVariable, setLimit, evaluate
+};
+
 window.onerror = function( message ) {
   document.getElementById( window.id + 'output' ).innerHTML = message;
 }

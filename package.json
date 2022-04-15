@@ -1,0 +1,7 @@
+{
+  "name": "mathcell",
+  "version": "1.0.0",
+  "bin": {
+    "mathcell": "./build/mathcell.js"
+  }
+}
