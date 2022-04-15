@@ -1,9 +1,8 @@
 
 function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
-  const pathToCDN = (config.useCDN
-    ? "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build"
-    : "packages/cdn"
+  const pathToThreejs = (
+    config.pathToThreejs || "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build"
   );
 
   return `
@@ -22,7 +21,7 @@ function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
 <body>
 
-<script src="${pathToCDN}/three.min.js"></script>
+<script src="${pathToThreejs}/three.min.js"></script>
 
 <script>
 
