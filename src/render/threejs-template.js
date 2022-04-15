@@ -428,8 +428,10 @@ function addSurface( s ) {
       group.userData.axis = mesh.userData.axis;
       group.userData.angle = mesh.userData.angle;
 
-      const shift = mesh.position.clone().sub(group.position);
-      group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
+      if (s.options.rotationOrigin) {
+        const shift = (new THREE.Vector3(...s.options.rotationOrigin)).sub(group.position);
+        group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
+      }
     }
 
   } else scene.add( mesh );
