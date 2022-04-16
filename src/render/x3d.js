@@ -197,14 +197,18 @@ ${x3d}`;
 
   }
 
+  const pathToX3dom = (config.pathToX3dom || "https://www.x3dom.org/download");
+  const pathToX_ite = (config.pathToX_ite || "https://code.create3000.de/x_ite/4.6.9/dist");
+  const pathToX_ite_dom = (config.pathToX_ite_dom || "https://raw.githack.com/andreasplesch/x_ite_dom/master/release");
+
   var stylesheet = config.viewer === 'x3dom' ?
-`<link rel="stylesheet" type="text/css" href="https://www.x3dom.org/download/x3dom.css">` :
-`<link rel="stylesheet" type="text/css" href="https://code.create3000.de/x_ite/4.6.9/dist/x_ite.css"/>`;
+`<link rel="stylesheet" type="text/css" href="${pathToX3dom}/x3dom.css">` :
+`<link rel="stylesheet" type="text/css" href="${pathToX_ite}/x_ite.css"/>`;
 
   var script = config.viewer === 'x3dom' ?
-`<script src="https://www.x3dom.org/download/x3dom.js"></script>` :
-`<script src="https://code.create3000.de/x_ite/4.6.9/dist/x_ite.min.js"></script>
-<script src="https://raw.githack.com/andreasplesch/x_ite_dom/master/release/x_ite_dom.1.3.js"></script>
+`<script src="${pathToX3dom}/x3dom.js"></script>` :
+`<script src="${pathToX_ite}/x_ite.min.js"></script>
+<script src="${pathToX_ite_dom}/x_ite_dom.1.3.js"></script>
 <script>
   //disable straighten horizon
   X3D( function ready() {

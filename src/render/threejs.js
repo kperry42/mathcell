@@ -85,6 +85,7 @@ function threejs( id, data, config ) {
   } );
 
   var border = config.no3DBorder ? 'none' : '1px solid black';
+  var pathToThreejs = config.pathToThreejs;
 
   config = JSON.stringify( config );
 
@@ -95,7 +96,7 @@ function threejs( id, data, config ) {
   lines = JSON.stringify( lines, dataReplacer );
   surfaces = JSON.stringify( surfaces, dataReplacer );
 
-  var html = threejsTemplate( config, lights, texts, points, lines, surfaces );
+  var html = threejsTemplate( config, lights, texts, points, lines, surfaces, pathToThreejs );
 
   return `<iframe style="width: 100%; height: 100%; border: ${border};"
                   srcdoc="${html.replace( /\"/g, '&quot;' )}" scrolling="no"></iframe>`;
