@@ -3133,6 +3133,7 @@ function addSurface( s ) {
       group.name = s.options.group;
       scene.add( group );
     }
+    mesh.position.sub(group.position);
     group.add( mesh );
 
     if ( mesh.userData.rotateOnAxis ) {
@@ -3140,6 +3141,11 @@ function addSurface( s ) {
       group.userData.rotateOnAxis = true;
       group.userData.axis = mesh.userData.axis;
       group.userData.angle = mesh.userData.angle;
+
+      if (s.options.rotationOrigin) {
+        const shift = (new THREE.Vector3(...s.options.rotationOrigin)).sub(group.position);
+        group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
+      }
     }
 
   } else scene.add( mesh );
