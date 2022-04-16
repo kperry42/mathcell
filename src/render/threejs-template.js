@@ -1,9 +1,7 @@
 
-function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
+function threejsTemplate( config, lights, texts, points, lines, surfaces, path ) {
 
-  const pathToThreejs = (
-    config.pathToThreejs || "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build"
-  );
+  path = (path || "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build");
 
   return `
 <!DOCTYPE html>
@@ -21,7 +19,7 @@ function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
 <body>
 
-<script src="${pathToThreejs}/three.min.js"></script>
+<script src="${path}/three.min.js"></script>
 
 <script>
 

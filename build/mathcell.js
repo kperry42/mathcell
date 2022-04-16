@@ -2720,11 +2720,9 @@ function svg( id, data, config ) {
 }
 
 
-function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
+function threejsTemplate( config, lights, texts, points, lines, surfaces, path ) {
 
-  const pathToThreejs = (
-    config.pathToThreejs || "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build"
-  );
+  path = (path || "https://cdn.jsdelivr.net/gh/paulmasson/threejs-with-controls@r135/build");
 
   return `
 <!DOCTYPE html>
@@ -2742,7 +2740,7 @@ function threejsTemplate( config, lights, texts, points, lines, surfaces ) {
 
 <body>
 
-<script src="${pathToThreejs}/three.min.js"></script>
+<script src="${path}/three.min.js"></script>
 
 <script>
 
@@ -3279,6 +3277,7 @@ function threejs( id, data, config ) {
   } );
 
   var border = config.no3DBorder ? 'none' : '1px solid black';
+  var pathToThreejs = config.pathToThreejs;
 
   config = JSON.stringify( config );
 
@@ -3289,7 +3288,7 @@ function threejs( id, data, config ) {
   lines = JSON.stringify( lines, dataReplacer );
   surfaces = JSON.stringify( surfaces, dataReplacer );
 
-  var html = threejsTemplate( config, lights, texts, points, lines, surfaces );
+  var html = threejsTemplate( config, lights, texts, points, lines, surfaces, pathToThreejs );
 
   return `<iframe style="width: 100%; height: 100%; border: ${border};"
                   srcdoc="${html.replace( /\"/g, '&quot;' )}" scrolling="no"></iframe>`;
