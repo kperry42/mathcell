@@ -1,6 +1,8 @@
 
-window.onerror = function( message ) {
-  document.getElementById( window.id + 'output' ).innerHTML = message;
+if (window) {
+  window.onerror = function( message ) {
+    document.getElementById( window.id + 'output' ).innerHTML = message;
+  }
 }
 
 function MathCell( id, inputs, config={} ) {
