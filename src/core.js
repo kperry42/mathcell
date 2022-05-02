@@ -1,5 +1,5 @@
 
-if (window) {
+if (typeof window !== "undefined") {
   window.onerror = function( message ) {
     document.getElementById( window.id + 'output' ).innerHTML = message;
   }

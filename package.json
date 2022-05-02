@@ -1,13 +1,16 @@
 {
   "name": "@backstrap/mathcell",
-  "version": "1.9.3-a.3",
+  "version": "1.9.3-a.4",
   "description": "Interactive 2D and 3D mathematical visualizations in your browser",
   "homepage": "https://paulmasson.github.io/mathcell/docs/",
   "author": "Paul Masson",
   "contributors": ["Kevin Perry"],
-  "author": "Paul Masson",
   "license": "MIT",
   "main": "build/mathcell.js",
+  "files": [
+    "build/**.js",
+    "docs/**"
+  ],
   "scripts": {
     "build": "sh ./build.sh",
     "winbuild": "./build.bat"
