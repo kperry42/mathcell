@@ -1,5 +1,5 @@
 
-if (window) {
+if (typeof window !== "undefined") {
   window.onerror = function( message ) {
     document.getElementById( window.id + 'output' ).innerHTML = message;
   }
@@ -3540,7 +3540,7 @@ ${x3d}
 
 }
 
-if (module) {
+if (typeof module !== "undefined") {
   module.exports = {
     // core
     MathCell, interact, graphic, generateId, checkLimits, getVariable, setLimit, evaluate,
