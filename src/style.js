@@ -1,3 +1,4 @@
+if (typeof document !== 'undefined') {
 
 var defaultPlotColor = 'rgb(0,127,255)';
 
@@ -220,3 +221,4 @@ input[type=range]::-moz-focus-outer {
 
 document.getElementsByTagName( 'head' )[0].appendChild( mathcellStyle );
 
+}
