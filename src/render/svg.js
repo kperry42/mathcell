@@ -1,6 +1,9 @@
 
 function svg( id, data, config ) {
 
+  var bc = 'backgroundColor' in config ? config.backgroundColor : 'white';
+  var ac = 'axesColor' in config ? config.axesColor : 'black';
+
   // working copy of data
   var data = JSON.parse( JSON.stringify( data, dataReplacer ), dataReviver );
 
@@ -34,7 +37,8 @@ function svg( id, data, config ) {
   var height = output.offsetHeight;
   var ext = 20; // axis extension
 
-  if ( config.includeOrigin ) data.push( [ { points: [[0,0]], options: { color: '' }, type: 'line' } ] );
+  if ( config.includeOrigin )
+    data.push( [ { points: [[0,0]], options: { color: '', opacity: 0 }, type: 'line' } ] );
 
   var texts = [], points = [], lines = [];
 
@@ -152,25 +156,33 @@ function svg( id, data, config ) {
 
   if ( yOrigin < 0 ) {
     yAxis = -1.5*ext;
-    yTotal += .5*ext + yOffset;
+    yTotal = height + 2.5*ext + yLabel + yOffset;
     yShift = 1.5*ext + yOffset;
     yOffset = -6;
     if ( yLabel > 0 ) yLabel += 12;
   }
   if ( yOrigin > height ) {
     yAxis = height + 1.5*ext;
-    yTotal += .5*ext + 1.5*yOffset;
+    yTotal = height + 2.5*ext + yLabel + 1.5*yOffset;
+  }
+
+  if ( !axes ) {
+    // minor shifts to avoid cutting off edges of objects
+    xShift = 5;
+    yShift = 5;
+    xTotal = width + 10;
+    yTotal = height + 10;
   }
 
   var svg = `
 <svg width="${ width }" height="${ height }" preserveAspectRatio="none"
      viewBox="${ -xShift } ${ -yShift } ${ xTotal } ${ yTotal }"
-     xmlns="http://www.w3.org/2000/svg">`;
+     xmlns="http://www.w3.org/2000/svg" style="background-color: ${ bc }">`;
 
   if ( axes ) {
 
-    svg += `<path d="M ${ -ext } ${ yAxis } L ${ width + ext } ${ yAxis }" stroke="black"/>`;
-    svg += `<path d="M ${ xAxis } ${ -ext } L ${ xAxis } ${ height + ext }" stroke="black"/>`;
+    svg += `<path d="M ${ -ext } ${ yAxis } L ${ width + ext } ${ yAxis }" stroke="${ ac }"/>`;
+    svg += `<path d="M ${ xAxis } ${ -ext } L ${ xAxis } ${ height + ext }" stroke="${ ac }"/>`;
 
     if ( ticks ) {
 
@@ -179,8 +191,8 @@ function svg( id, data, config ) {
         if ( chop(i) !== 0 || ( yOrigin !== yAxis && yLabel === 0 ) ) {
           var x = Math.round( xOrigin + xScale*i );
           svg += `<path d="M ${ x } ${ yAxis } L ${ x } ${ yAxis - Math.sign(yOffset)*tickSize }"
-                        stroke="black" />`;
-          svg += `<text x="${ x }" y="${ yAxis + yOffset }"
+                        stroke="${ ac }" />`;
+          svg += `<text x="${ x }" y="${ yAxis + yOffset }" fill="${ ac }"
                         font-family="monospace" text-anchor="middle">
                   ${ +i.toFixed(xTickDecimals) }</text>`;
         }
@@ -191,8 +203,8 @@ function svg( id, data, config ) {
         if ( chop(i) !== 0 || ( xOrigin !== xAxis && xLabel === 0 ) ) {
           var y = Math.round( yOrigin - yScale*i );
           svg += `<path d="M ${ xAxis } ${ y } L ${ xAxis + Math.sign(xOffset)*tickSize } ${ y }"
-                        stroke="black" />`;
-          svg += `<text x="${ xAxis - xOffset }" y="${ y }"
+                        stroke="${ ac }" />`;
+          svg += `<text x="${ xAxis - xOffset }" y="${ y }" fill="${ ac }"
                         font-family="monospace" text-anchor="end" dominant-baseline="central">
                   ${ +i.toFixed(yTickDecimals) }</text>`;
         }
@@ -201,10 +213,10 @@ function svg( id, data, config ) {
     }
 
     svg += `<text x="${ width + ext + Math.abs(xOffset) }" y="${ yAxis }"
-            font-family="monospace" font-size="110%" font-weight="bold"
+            font-family="monospace" font-size="110%" font-weight="bold" fill="${ ac }"
             dominant-baseline="central">${ xAxisLabel }</text>`;
     svg += `<text x="${ xAxis }" y="${ -ext - yLabel/2 }"
-            font-family="monospace" font-size="110%" font-weight="bold"
+            font-family="monospace" font-size="110%" font-weight="bold" fill="${ ac }"
             text-anchor="middle">${ yAxisLabel }</text>`;
 
   }
@@ -300,8 +312,11 @@ function svg( id, data, config ) {
 
     }
 
-    svg += `" stroke="${ l.options.color }" stroke-width="1.5" opacity="${ l.options.opacity }"
- fill="${ l.options.fill ? l.options.color : 'none' }"/>`;
+    var thickness = l.options.thickness ? l.options.thickness : 1.5;
+
+    svg += `"
+  stroke="${ l.options.color }" stroke-width="${ thickness }" opacity="${ l.options.opacity }"
+  fill="${ l.options.fill ? l.options.color : 'none' }"/>`;
 
   }
 

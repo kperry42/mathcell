@@ -12,6 +12,9 @@ function MathCell( id, inputs, config={} ) {
     var label = 'label' in input ? input.label : '';
     if ( label.length === 1 ) label = `<i>${label}</i>`;
 
+    if ( input.type === 'action' ) return `
+<div style="width: 100%; display: inline-block"> ${interact( id, input )} </div>`;
+
     return `
 <div style="white-space: nowrap">
 <div style="min-width: .5in; display: inline-block">${label}</div>
@@ -116,11 +119,12 @@ ${t}
 
 function interact( id, input ) {
 
+  var name = 'name' in input ? input.name : '';
+
   switch ( input.type ) {
 
     case 'slider':
 
-      var name = 'name' in input ? input.name : '';
       var min = 'min' in input ? input.min : 0;
       var max = 'max' in input ? input.max : 1;
       var step = 'step' in input ? input.step : .01;
@@ -138,7 +142,6 @@ function interact( id, input ) {
 
     case 'buttons':
 
-      var name = 'name' in input ? input.name : '';
       var values = 'values' in input ? input.values : [1,2,3];
       var labels = 'labels' in input ? input.labels : false;
       var select = 'default' in input ? input.default : values[0];
@@ -157,7 +160,6 @@ function interact( id, input ) {
 
     case 'number':
 
-      var name = 'name' in input ? input.name : '';
       var min = 'min' in input ? input.min : 0;
       var max = 'max' in input ? input.max : 1;
       var step = 'step' in input ? input.step : .01;
@@ -170,7 +172,6 @@ function interact( id, input ) {
 
     case 'checkbox':
 
-      var name = 'name' in input ? input.name : '';
       var checked = 'default' in input ? input.default : '';
 
       return `
@@ -179,7 +180,6 @@ function interact( id, input ) {
 
     case 'text':
 
-      var name = 'name' in input ? input.name : '';
       var value = 'default' in input ? input.default : '';
 
       var width = 'width: ' + ( input.width ? input.width : 'calc(100% - .6in)' );
@@ -187,6 +187,35 @@ function interact( id, input ) {
       return `
 <input id=${id + name} type=text value="${value}" style="${width}"
        onchange="window.id='${id}';${id}.update('${id}')"/>`;
+
+    case 'iterator':
+
+      var value = 'default' in input ? input.default : 0;
+
+      var width = '.75in', last = '';
+
+      if ( input.reversible )
+        last = `
+<button onclick="${id + name}.innerHTML--;window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Last</button>`;
+
+      return `
+<div id=${id + name}
+    style="display: inline-block; width: .5in; text-align: left">${value}</div> ${last}
+<button onclick="${id + name}.innerHTML++;window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Next</button>
+<button onclick="${id + name}.innerHTML=${value};window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Reset</button>`;
+
+    case 'action':
+
+      var script = 'script' in input ? input.script : 'doNothing';
+      var label = 'label' in input ? input.label : '&nbsp;';
+
+      var width = 'width' in input ? input.width : '1in';
+
+      if ( input.subtype === 'updateParent' ) return `
+<button onclick="${id}.${script}" style="width: ${width}">${label}</button>`;
 
     default:
 
@@ -289,7 +318,11 @@ function getVariable( id, name ) {
 
   var input = document.getElementById( id + name );
 
-  if ( input ) switch ( input.type ) {
+  if ( input ) {
+
+    if ( input.innerHTML ) return +input.innerHTML; // iterator
+
+    switch ( input.type ) {
 
     case 'number':
     case 'range':
@@ -304,12 +337,14 @@ function getVariable( id, name ) {
 
       return input.value;
 
+    }
+
   } else {
 
     var value = document.querySelector( 'input[name=' + id + name + ']:checked' ).value;
 
     if ( isNaN(value) ) return value;
-    else return +value;
+    return +value;
 
   }
 
@@ -385,6 +420,20 @@ function evaluate( id, data, config ) {
     }
 
   }
+
+}
+
+
+function injectFunctions( id, functions, n='' ) {
+
+  var output = document.getElementById( id + 'output' + n );
+
+  if ( output.children.length > 0 && output.children[0].contentWindow ) {
+
+    var cw = output.children[0].contentWindow;
+    Object.keys( functions ).forEach( k => cw[k] = functions[k] );
+
+  } else throw Error( 'injectFuctions must follow evaluate' );
 
 }
 
@@ -636,11 +685,16 @@ function colorFromHue( h ) {
 
 function colorFromArg( x ) {
 
+  if ( !( typeof x === 'object' && 're' in x ) ) // from Math
+    x = { re: x, im: 0 };
+
   var h = Math.atan2( x.im, x.re ) / Math.PI / 2;
 
   return colorFromHue(h);
 
 }
+
+function colorStringFromHue( h ) { return `hsl(${360*h},100%,50%)`; }
 
 function colorToHexString( color ) {
 
@@ -1834,10 +1888,17 @@ function polarPlot( f, aRange, options={} ) {
 
 function parametric( vector, xRange, yRange, options={} ) {
 
+  var test = Math.random();
+
   var slices = xRange.length < 3 ? 50 : xRange[2];
   var xStep = ( xRange[1] - xRange[0] ) / slices;
 
   if ( !Array.isArray( yRange ) ) {
+
+    if ( !Array.isArray( vector(test) ) ) {
+      var f = vector;
+      vector = x => [ x, f(x) ];
+    }
 
     var points = [];
     for ( var i = 0 ; i <= slices ; i++ ) {
@@ -1856,6 +1917,11 @@ function parametric( vector, xRange, yRange, options={} ) {
   var stacks = yRange.length < 3 ? 50 : yRange[2];
   var yStep = ( yRange[1] - yRange[0] ) / stacks;
 
+  if ( !Array.isArray( vector(test,test) ) ) {
+    var f = vector;
+    vector = (x,y) => [ x, y, f(x,y) ];
+  }
+
   var vertices = [];
   if ( 'colormap' in options ) options.colors = [];
 
@@ -1865,7 +1931,9 @@ function parametric( vector, xRange, yRange, options={} ) {
       var x = xRange[0] + j * xStep;
       var v = vector(x,y);
 
-      if ( 'complexFunction' in options )
+      if ( 'complexFunction' in options ) {
+        if ( !( typeof v[2] === 'object' && 're' in v[2] ) ) // from Math
+          v[2] = { re: v[2], im: 0 };
         switch( options.complexFunction ) {
           case 're':
             vertices.push( [ v[0], v[1], v[2].re ] );
@@ -1879,7 +1947,7 @@ function parametric( vector, xRange, yRange, options={} ) {
           default:
             throw Error( 'Unsupported complex function case' );
         }
-      else vertices.push( v );
+      } else vertices.push( v );
 
       if ( 'colormap' in options ) {
         if ( options.colormap === 'complexArgument' )
@@ -1935,11 +2003,18 @@ function wireframe( vector, xRange, yRange, options={} ) {
 
   if ( !options.openEnded ) options.openEnded = true;
 
+  var test = Math.random();
+
   var slices = xRange.length < 3 ? 50 : xRange[2];
   var xStep = ( xRange[1] - xRange[0] ) / slices;
 
   var stacks = yRange.length < 3 ? 50 : yRange[2];
   var yStep = ( yRange[1] - yRange[0] ) / stacks;
+
+  if ( !Array.isArray( vector(test,test) ) ) {
+    var f = vector;
+    vector = (x,y) => [ x, y, f(x,y) ];
+  }
 
   var lines = [];
 
@@ -2197,8 +2272,6 @@ function line( points, options={} ) {
 
   else {
 
-    if ( !( 'linewidth' in options ) ) options.linewidth = 1;
-
     return [ { points: points, options: options, type: 'line' } ];
 
   }
@@ -2393,6 +2466,9 @@ function cone( radius, height, options={} ) {
 
 function svg( id, data, config ) {
 
+  var bc = 'backgroundColor' in config ? config.backgroundColor : 'white';
+  var ac = 'axesColor' in config ? config.axesColor : 'black';
+
   // working copy of data
   var data = JSON.parse( JSON.stringify( data, dataReplacer ), dataReviver );
 
@@ -2426,7 +2502,8 @@ function svg( id, data, config ) {
   var height = output.offsetHeight;
   var ext = 20; // axis extension
 
-  if ( config.includeOrigin ) data.push( [ { points: [[0,0]], options: { color: '' }, type: 'line' } ] );
+  if ( config.includeOrigin )
+    data.push( [ { points: [[0,0]], options: { color: '', opacity: 0 }, type: 'line' } ] );
 
   var texts = [], points = [], lines = [];
 
@@ -2544,25 +2621,33 @@ function svg( id, data, config ) {
 
   if ( yOrigin < 0 ) {
     yAxis = -1.5*ext;
-    yTotal += .5*ext + yOffset;
+    yTotal = height + 2.5*ext + yLabel + yOffset;
     yShift = 1.5*ext + yOffset;
     yOffset = -6;
     if ( yLabel > 0 ) yLabel += 12;
   }
   if ( yOrigin > height ) {
     yAxis = height + 1.5*ext;
-    yTotal += .5*ext + 1.5*yOffset;
+    yTotal = height + 2.5*ext + yLabel + 1.5*yOffset;
+  }
+
+  if ( !axes ) {
+    // minor shifts to avoid cutting off edges of objects
+    xShift = 5;
+    yShift = 5;
+    xTotal = width + 10;
+    yTotal = height + 10;
   }
 
   var svg = `
 <svg width="${ width }" height="${ height }" preserveAspectRatio="none"
      viewBox="${ -xShift } ${ -yShift } ${ xTotal } ${ yTotal }"
-     xmlns="http://www.w3.org/2000/svg">`;
+     xmlns="http://www.w3.org/2000/svg" style="background-color: ${ bc }">`;
 
   if ( axes ) {
 
-    svg += `<path d="M ${ -ext } ${ yAxis } L ${ width + ext } ${ yAxis }" stroke="black"/>`;
-    svg += `<path d="M ${ xAxis } ${ -ext } L ${ xAxis } ${ height + ext }" stroke="black"/>`;
+    svg += `<path d="M ${ -ext } ${ yAxis } L ${ width + ext } ${ yAxis }" stroke="${ ac }"/>`;
+    svg += `<path d="M ${ xAxis } ${ -ext } L ${ xAxis } ${ height + ext }" stroke="${ ac }"/>`;
 
     if ( ticks ) {
 
@@ -2571,8 +2656,8 @@ function svg( id, data, config ) {
         if ( chop(i) !== 0 || ( yOrigin !== yAxis && yLabel === 0 ) ) {
           var x = Math.round( xOrigin + xScale*i );
           svg += `<path d="M ${ x } ${ yAxis } L ${ x } ${ yAxis - Math.sign(yOffset)*tickSize }"
-                        stroke="black" />`;
-          svg += `<text x="${ x }" y="${ yAxis + yOffset }"
+                        stroke="${ ac }" />`;
+          svg += `<text x="${ x }" y="${ yAxis + yOffset }" fill="${ ac }"
                         font-family="monospace" text-anchor="middle">
                   ${ +i.toFixed(xTickDecimals) }</text>`;
         }
@@ -2583,8 +2668,8 @@ function svg( id, data, config ) {
         if ( chop(i) !== 0 || ( xOrigin !== xAxis && xLabel === 0 ) ) {
           var y = Math.round( yOrigin - yScale*i );
           svg += `<path d="M ${ xAxis } ${ y } L ${ xAxis + Math.sign(xOffset)*tickSize } ${ y }"
-                        stroke="black" />`;
-          svg += `<text x="${ xAxis - xOffset }" y="${ y }"
+                        stroke="${ ac }" />`;
+          svg += `<text x="${ xAxis - xOffset }" y="${ y }" fill="${ ac }"
                         font-family="monospace" text-anchor="end" dominant-baseline="central">
                   ${ +i.toFixed(yTickDecimals) }</text>`;
         }
@@ -2593,10 +2678,10 @@ function svg( id, data, config ) {
     }
 
     svg += `<text x="${ width + ext + Math.abs(xOffset) }" y="${ yAxis }"
-            font-family="monospace" font-size="110%" font-weight="bold"
+            font-family="monospace" font-size="110%" font-weight="bold" fill="${ ac }"
             dominant-baseline="central">${ xAxisLabel }</text>`;
     svg += `<text x="${ xAxis }" y="${ -ext - yLabel/2 }"
-            font-family="monospace" font-size="110%" font-weight="bold"
+            font-family="monospace" font-size="110%" font-weight="bold" fill="${ ac }"
             text-anchor="middle">${ yAxisLabel }</text>`;
 
   }
@@ -2692,8 +2777,11 @@ function svg( id, data, config ) {
 
     }
 
-    svg += `" stroke="${ l.options.color }" stroke-width="1.5" opacity="${ l.options.opacity }"
- fill="${ l.options.fill ? l.options.color : 'none' }"/>`;
+    var thickness = l.options.thickness ? l.options.thickness : 1.5;
+
+    svg += `"
+  stroke="${ l.options.color }" stroke-width="${ thickness }" opacity="${ l.options.opacity }"
+  fill="${ l.options.fill ? l.options.color : 'none' }"/>`;
 
   }
 
@@ -2889,6 +2977,7 @@ scene.add( new THREE.AmbientLight( config.ambientLight, 1 ) );
 var controls = new THREE.OrbitControls( camera, renderer.domElement );
 controls.target.set( xMid, yMid, zMid );
 controls.addEventListener( 'change', function() { if ( !animate ) render(); } );
+controls.update();
 
 window.addEventListener( 'resize', function() {
 
@@ -2910,6 +2999,7 @@ window.addEventListener( 'touchend', suspendAnimation );
 var suspendTimer;
 
 function suspendAnimation() {
+  if ( config.animateOnInteraction ) return;
   clearInterval( suspendTimer );
   animate = false;
   suspendTimer = setTimeout( function() { if ( config.animate ) { animate = true; render(); } }, 5000 );
@@ -3012,8 +3102,9 @@ function addLine( l ) {
   var geometry = new THREE.BufferGeometry();
   geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
 
+  var linewidth = l.options.thickness ? l.options.thickness : 1;
   var transparent = l.options.opacity < 1 ? true : false;
-  var material = new THREE.LineBasicMaterial( { color: l.options.color, linewidth: l.options.linewidth,
+  var material = new THREE.LineBasicMaterial( { color: l.options.color, linewidth: linewidth,
                                                 transparent: transparent, opacity: l.options.opacity } );
 
   var c = new THREE.Vector3();
@@ -3124,11 +3215,33 @@ function addSurface( s ) {
   var mesh = new THREE.Mesh( geometry, material );
   mesh.position.set( c.x, c.y, c.z );
   if ( s.options.renderOrder ) mesh.renderOrder = s.options.renderOrder;
+
+  // to be removed
   if ( s.options.rotationAxisAngle ) {
-    mesh.userData.rotateOnAxis = true;
-    var v = s.options.rotationAxisAngle[0];
-    mesh.userData.axis = new THREE.Vector3( v[0], v[1], v[2] ).normalize();
-    mesh.userData.angle = s.options.rotationAxisAngle[1];
+    s.options.rotation = { axis: s.options.rotationAxisAngle[0],
+                           angle: s.options.rotationAxisAngle[1] }
+    console.log( 'rotationAxisAngle is deprecated: see documentation for new format' );
+  }
+
+  // to be removed
+  if ( s.options.rotationOrigin ) {
+    (s.options.rotation||{}).origin = s.options.rotationOrigin;
+    console.log( 'rotationOrigin is deprecated: see documentation for new format' );
+  }
+
+  if ( s.options.rotation ) {
+    var v = s.options.rotation.axis;
+    mesh.userData.rotation = { axis: new THREE.Vector3( v[0], v[1], v[2] ).normalize(),
+                               angle: s.options.rotation.angle,
+                               origin: s.options.rotation.origin };
+  }
+
+  if ( s.options.translation ) {
+    var arg = s.options.translation.argument ? s.options.translation.argument : 't';
+    var step = s.options.translation.step ? s.options.translation.step : .05;
+    mesh.userData.translation = { 
+      path: Function( arg, 'return ' + s.options.translation.path ),
+      step: step, t: 0 };
   }
 
   if ( 'group' in s.options ) {
@@ -3142,16 +3255,14 @@ function addSurface( s ) {
     mesh.position.sub(group.position);
     group.add( mesh );
 
-    if ( mesh.userData.rotateOnAxis ) {
-      mesh.userData.rotateOnAxis = false;
-      group.userData.rotateOnAxis = true;
-      group.userData.axis = mesh.userData.axis;
-      group.userData.angle = mesh.userData.angle;
-
-      if (s.options.rotationOrigin) {
-        const shift = (new THREE.Vector3(...s.options.rotationOrigin)).sub(group.position);
+    if ( mesh.userData.rotation ) {
+      group.userData.rotation = { axis: mesh.userData.rotation.axis,
+                                  angle: mesh.userData.rotation.angle };
+      if (mesh.userData.rotation.origin) {
+        const shift = (new THREE.Vector3(...mesh.userData.rotation.origin)).sub(group.position);
         group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
       }
+      mesh.userData.rotation = false;
     }
 
   } else scene.add( mesh );
@@ -3160,9 +3271,9 @@ function addSurface( s ) {
 
 if ( config.clippingPlane ) {
 
-  var v = config.clippingPlane[0];
-  var d = config.clippingPlane[1];
-  var plane = new THREE.Plane( new THREE.Vector3(v[0],v[1],v[2]).normalize(), d );
+  var v = config.clippingPlane.vector;
+  var d = config.clippingPlane.distance;
+  var plane = new THREE.Plane( new THREE.Vector3( v[0], v[1], v[2] ).normalize(), d );
   renderer.clippingPlanes = [ plane ];
 
 }
@@ -3174,16 +3285,20 @@ function render() {
 
   scene.children.forEach( child => {
 
-    if ( child.userData.rotateOnAxis && animate )
-      child.rotateOnAxis( child.userData.axis, child.userData.angle );
+    if ( child.userData.rotation && animate )
+      child.rotateOnAxis( child.userData.rotation.axis, child.userData.rotation.angle );
+
+    if ( child.userData.translation && animate ) {
+      var v = child.userData.translation.path( child.userData.translation.t );
+      child.position.set( v[0], v[1], v[2] );
+      child.userData.translation.t += child.userData.translation.step;
+    }
 
   } );
 
 }
 
 render();
-controls.update();
-if ( !animate ) render();
 
 </script>
 
@@ -3199,13 +3314,10 @@ function threejs( id, data, config ) {
   var data = JSON.parse( JSON.stringify( data, dataReplacer ), dataReviver );
 
   if ( !( 'ambientLight' in config ) ) config.ambientLight = 'rgb(127,127,127)';
-  if ( !( 'animate' in config ) ) config.animate = false;
   if ( !( 'aspectRatio' in config ) ) config.aspectRatio = [1,1,1];
-  if ( !( 'axes' in config ) ) config.axes = false;
-  if ( !( 'axesLabels' in config ) ) config.axesLabels = ['x','y','z'];
+  if ( !( 'axesLabels' in config ) || config.axesLabels === true ) config.axesLabels = ['x','y','z'];
   if ( !( 'clearColor' in config ) ) config.clearColor = 'white';
   if ( !( 'decimals' in config ) ) config.decimals = 2;
-  if ( !( 'equalAspect' in config ) ) config.equalAspect = false;
   if ( !( 'frame' in config ) ) config.frame = true;
   if ( !( 'viewpoint' in config ) ) config.viewpoint = 'auto';
 
@@ -3229,9 +3341,16 @@ function threejs( id, data, config ) {
   for ( var i = 0 ; i < data.length ; i++ )
     for ( var j = 0 ; j < data[i].length ; j++ ) {
       var d = data[i][j];
-      if ( d.type === 'text' ) texts.push( d );
-      if ( d.type === 'point' ) points.push( d );
+      if ( d.type === 'text' ) {
+        if ( typeof d.point[2] === 'undefined' ) d.point[2] = 0;
+        texts.push( d );
+      }
+      if ( d.type === 'point' ) {
+        if ( typeof d.point[2] === 'undefined' ) d.point[2] = 0;
+        points.push( d );
+      }
       if ( d.type === 'line' ) {
+        d.points.forEach ( p => { if ( typeof p[2] === 'undefined' ) p[2] = 0; } );
         d.points = roundTo( d.points, 3, false ); // reduce raw data size
         lines.push( d );
       }

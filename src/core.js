@@ -12,6 +12,9 @@ function MathCell( id, inputs, config={} ) {
     var label = 'label' in input ? input.label : '';
     if ( label.length === 1 ) label = `<i>${label}</i>`;
 
+    if ( input.type === 'action' ) return `
+<div style="width: 100%; display: inline-block"> ${interact( id, input )} </div>`;
+
     return `
 <div style="white-space: nowrap">
 <div style="min-width: .5in; display: inline-block">${label}</div>
@@ -116,11 +119,12 @@ ${t}
 
 function interact( id, input ) {
 
+  var name = 'name' in input ? input.name : '';
+
   switch ( input.type ) {
 
     case 'slider':
 
-      var name = 'name' in input ? input.name : '';
       var min = 'min' in input ? input.min : 0;
       var max = 'max' in input ? input.max : 1;
       var step = 'step' in input ? input.step : .01;
@@ -138,7 +142,6 @@ function interact( id, input ) {
 
     case 'buttons':
 
-      var name = 'name' in input ? input.name : '';
       var values = 'values' in input ? input.values : [1,2,3];
       var labels = 'labels' in input ? input.labels : false;
       var select = 'default' in input ? input.default : values[0];
@@ -157,7 +160,6 @@ function interact( id, input ) {
 
     case 'number':
 
-      var name = 'name' in input ? input.name : '';
       var min = 'min' in input ? input.min : 0;
       var max = 'max' in input ? input.max : 1;
       var step = 'step' in input ? input.step : .01;
@@ -170,7 +172,6 @@ function interact( id, input ) {
 
     case 'checkbox':
 
-      var name = 'name' in input ? input.name : '';
       var checked = 'default' in input ? input.default : '';
 
       return `
@@ -179,7 +180,6 @@ function interact( id, input ) {
 
     case 'text':
 
-      var name = 'name' in input ? input.name : '';
       var value = 'default' in input ? input.default : '';
 
       var width = 'width: ' + ( input.width ? input.width : 'calc(100% - .6in)' );
@@ -187,6 +187,35 @@ function interact( id, input ) {
       return `
 <input id=${id + name} type=text value="${value}" style="${width}"
        onchange="window.id='${id}';${id}.update('${id}')"/>`;
+
+    case 'iterator':
+
+      var value = 'default' in input ? input.default : 0;
+
+      var width = '.75in', last = '';
+
+      if ( input.reversible )
+        last = `
+<button onclick="${id + name}.innerHTML--;window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Last</button>`;
+
+      return `
+<div id=${id + name}
+    style="display: inline-block; width: .5in; text-align: left">${value}</div> ${last}
+<button onclick="${id + name}.innerHTML++;window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Next</button>
+<button onclick="${id + name}.innerHTML=${value};window.id='${id}';${id}.update('${id}')"
+    style="width: ${width}">Reset</button>`;
+
+    case 'action':
+
+      var script = 'script' in input ? input.script : 'doNothing';
+      var label = 'label' in input ? input.label : '&nbsp;';
+
+      var width = 'width' in input ? input.width : '1in';
+
+      if ( input.subtype === 'updateParent' ) return `
+<button onclick="${id}.${script}" style="width: ${width}">${label}</button>`;
 
     default:
 
@@ -289,7 +318,11 @@ function getVariable( id, name ) {
 
   var input = document.getElementById( id + name );
 
-  if ( input ) switch ( input.type ) {
+  if ( input ) {
+
+    if ( input.innerHTML ) return +input.innerHTML; // iterator
+
+    switch ( input.type ) {
 
     case 'number':
     case 'range':
@@ -304,12 +337,14 @@ function getVariable( id, name ) {
 
       return input.value;
 
+    }
+
   } else {
 
     var value = document.querySelector( 'input[name=' + id + name + ']:checked' ).value;
 
     if ( isNaN(value) ) return value;
-    else return +value;
+    return +value;
 
   }
 
@@ -385,6 +420,20 @@ function evaluate( id, data, config ) {
     }
 
   }
+
+}
+
+
+function injectFunctions( id, functions, n='' ) {
+
+  var output = document.getElementById( id + 'output' + n );
+
+  if ( output.children.length > 0 && output.children[0].contentWindow ) {
+
+    var cw = output.children[0].contentWindow;
+    Object.keys( functions ).forEach( k => cw[k] = functions[k] );
+
+  } else throw Error( 'injectFuctions must follow evaluate' );
 
 }
 

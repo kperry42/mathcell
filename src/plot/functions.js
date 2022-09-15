@@ -59,10 +59,17 @@ function polarPlot( f, aRange, options={} ) {
 
 function parametric( vector, xRange, yRange, options={} ) {
 
+  var test = Math.random();
+
   var slices = xRange.length < 3 ? 50 : xRange[2];
   var xStep = ( xRange[1] - xRange[0] ) / slices;
 
   if ( !Array.isArray( yRange ) ) {
+
+    if ( !Array.isArray( vector(test) ) ) {
+      var f = vector;
+      vector = x => [ x, f(x) ];
+    }
 
     var points = [];
     for ( var i = 0 ; i <= slices ; i++ ) {
@@ -81,6 +88,11 @@ function parametric( vector, xRange, yRange, options={} ) {
   var stacks = yRange.length < 3 ? 50 : yRange[2];
   var yStep = ( yRange[1] - yRange[0] ) / stacks;
 
+  if ( !Array.isArray( vector(test,test) ) ) {
+    var f = vector;
+    vector = (x,y) => [ x, y, f(x,y) ];
+  }
+
   var vertices = [];
   if ( 'colormap' in options ) options.colors = [];
 
@@ -90,7 +102,9 @@ function parametric( vector, xRange, yRange, options={} ) {
       var x = xRange[0] + j * xStep;
       var v = vector(x,y);
 
-      if ( 'complexFunction' in options )
+      if ( 'complexFunction' in options ) {
+        if ( !( typeof v[2] === 'object' && 're' in v[2] ) ) // from Math
+          v[2] = { re: v[2], im: 0 };
         switch( options.complexFunction ) {
           case 're':
             vertices.push( [ v[0], v[1], v[2].re ] );
@@ -104,7 +118,7 @@ function parametric( vector, xRange, yRange, options={} ) {
           default:
             throw Error( 'Unsupported complex function case' );
         }
-      else vertices.push( v );
+      } else vertices.push( v );
 
       if ( 'colormap' in options ) {
         if ( options.colormap === 'complexArgument' )
@@ -160,11 +174,18 @@ function wireframe( vector, xRange, yRange, options={} ) {
 
   if ( !options.openEnded ) options.openEnded = true;
 
+  var test = Math.random();
+
   var slices = xRange.length < 3 ? 50 : xRange[2];
   var xStep = ( xRange[1] - xRange[0] ) / slices;
 
   var stacks = yRange.length < 3 ? 50 : yRange[2];
   var yStep = ( yRange[1] - yRange[0] ) / stacks;
+
+  if ( !Array.isArray( vector(test,test) ) ) {
+    var f = vector;
+    vector = (x,y) => [ x, y, f(x,y) ];
+  }
 
   var lines = [];
 

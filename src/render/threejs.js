@@ -5,13 +5,10 @@ function threejs( id, data, config ) {
   var data = JSON.parse( JSON.stringify( data, dataReplacer ), dataReviver );
 
   if ( !( 'ambientLight' in config ) ) config.ambientLight = 'rgb(127,127,127)';
-  if ( !( 'animate' in config ) ) config.animate = false;
   if ( !( 'aspectRatio' in config ) ) config.aspectRatio = [1,1,1];
-  if ( !( 'axes' in config ) ) config.axes = false;
-  if ( !( 'axesLabels' in config ) ) config.axesLabels = ['x','y','z'];
+  if ( !( 'axesLabels' in config ) || config.axesLabels === true ) config.axesLabels = ['x','y','z'];
   if ( !( 'clearColor' in config ) ) config.clearColor = 'white';
   if ( !( 'decimals' in config ) ) config.decimals = 2;
-  if ( !( 'equalAspect' in config ) ) config.equalAspect = false;
   if ( !( 'frame' in config ) ) config.frame = true;
   if ( !( 'viewpoint' in config ) ) config.viewpoint = 'auto';
 
@@ -35,9 +32,16 @@ function threejs( id, data, config ) {
   for ( var i = 0 ; i < data.length ; i++ )
     for ( var j = 0 ; j < data[i].length ; j++ ) {
       var d = data[i][j];
-      if ( d.type === 'text' ) texts.push( d );
-      if ( d.type === 'point' ) points.push( d );
+      if ( d.type === 'text' ) {
+        if ( typeof d.point[2] === 'undefined' ) d.point[2] = 0;
+        texts.push( d );
+      }
+      if ( d.type === 'point' ) {
+        if ( typeof d.point[2] === 'undefined' ) d.point[2] = 0;
+        points.push( d );
+      }
       if ( d.type === 'line' ) {
+        d.points.forEach ( p => { if ( typeof p[2] === 'undefined' ) p[2] = 0; } );
         d.points = roundTo( d.points, 3, false ); // reduce raw data size
         lines.push( d );
       }

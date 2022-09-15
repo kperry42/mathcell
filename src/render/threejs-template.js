@@ -166,6 +166,7 @@ scene.add( new THREE.AmbientLight( config.ambientLight, 1 ) );
 var controls = new THREE.OrbitControls( camera, renderer.domElement );
 controls.target.set( xMid, yMid, zMid );
 controls.addEventListener( 'change', function() { if ( !animate ) render(); } );
+controls.update();
 
 window.addEventListener( 'resize', function() {
 
@@ -187,6 +188,7 @@ window.addEventListener( 'touchend', suspendAnimation );
 var suspendTimer;
 
 function suspendAnimation() {
+  if ( config.animateOnInteraction ) return;
   clearInterval( suspendTimer );
   animate = false;
   suspendTimer = setTimeout( function() { if ( config.animate ) { animate = true; render(); } }, 5000 );
@@ -289,8 +291,9 @@ function addLine( l ) {
   var geometry = new THREE.BufferGeometry();
   geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
 
+  var linewidth = l.options.thickness ? l.options.thickness : 1;
   var transparent = l.options.opacity < 1 ? true : false;
-  var material = new THREE.LineBasicMaterial( { color: l.options.color, linewidth: l.options.linewidth,
+  var material = new THREE.LineBasicMaterial( { color: l.options.color, linewidth: linewidth,
                                                 transparent: transparent, opacity: l.options.opacity } );
 
   var c = new THREE.Vector3();
@@ -401,11 +404,33 @@ function addSurface( s ) {
   var mesh = new THREE.Mesh( geometry, material );
   mesh.position.set( c.x, c.y, c.z );
   if ( s.options.renderOrder ) mesh.renderOrder = s.options.renderOrder;
+
+  // to be removed
   if ( s.options.rotationAxisAngle ) {
-    mesh.userData.rotateOnAxis = true;
-    var v = s.options.rotationAxisAngle[0];
-    mesh.userData.axis = new THREE.Vector3( v[0], v[1], v[2] ).normalize();
-    mesh.userData.angle = s.options.rotationAxisAngle[1];
+    s.options.rotation = { axis: s.options.rotationAxisAngle[0],
+                           angle: s.options.rotationAxisAngle[1] }
+    console.log( 'rotationAxisAngle is deprecated: see documentation for new format' );
+  }
+
+  // to be removed
+  if ( s.options.rotationOrigin ) {
+    (s.options.rotation||{}).origin = s.options.rotationOrigin;
+    console.log( 'rotationOrigin is deprecated: see documentation for new format' );
+  }
+
+  if ( s.options.rotation ) {
+    var v = s.options.rotation.axis;
+    mesh.userData.rotation = { axis: new THREE.Vector3( v[0], v[1], v[2] ).normalize(),
+                               angle: s.options.rotation.angle,
+                               origin: s.options.rotation.origin };
+  }
+
+  if ( s.options.translation ) {
+    var arg = s.options.translation.argument ? s.options.translation.argument : 't';
+    var step = s.options.translation.step ? s.options.translation.step : .05;
+    mesh.userData.translation = { 
+      path: Function( arg, 'return ' + s.options.translation.path ),
+      step: step, t: 0 };
   }
 
   if ( 'group' in s.options ) {
@@ -419,16 +444,14 @@ function addSurface( s ) {
     mesh.position.sub(group.position);
     group.add( mesh );
 
-    if ( mesh.userData.rotateOnAxis ) {
-      mesh.userData.rotateOnAxis = false;
-      group.userData.rotateOnAxis = true;
-      group.userData.axis = mesh.userData.axis;
-      group.userData.angle = mesh.userData.angle;
-
-      if (s.options.rotationOrigin) {
-        const shift = (new THREE.Vector3(...s.options.rotationOrigin)).sub(group.position);
+    if ( mesh.userData.rotation ) {
+      group.userData.rotation = { axis: mesh.userData.rotation.axis,
+                                  angle: mesh.userData.rotation.angle };
+      if (mesh.userData.rotation.origin) {
+        const shift = (new THREE.Vector3(...mesh.userData.rotation.origin)).sub(group.position);
         group.traverse(obj => obj.position[obj === group ? 'add' : 'sub'](shift));
       }
+      mesh.userData.rotation = false;
     }
 
   } else scene.add( mesh );
@@ -437,9 +460,9 @@ function addSurface( s ) {
 
 if ( config.clippingPlane ) {
 
-  var v = config.clippingPlane[0];
-  var d = config.clippingPlane[1];
-  var plane = new THREE.Plane( new THREE.Vector3(v[0],v[1],v[2]).normalize(), d );
+  var v = config.clippingPlane.vector;
+  var d = config.clippingPlane.distance;
+  var plane = new THREE.Plane( new THREE.Vector3( v[0], v[1], v[2] ).normalize(), d );
   renderer.clippingPlanes = [ plane ];
 
 }
@@ -451,16 +474,20 @@ function render() {
 
   scene.children.forEach( child => {
 
-    if ( child.userData.rotateOnAxis && animate )
-      child.rotateOnAxis( child.userData.axis, child.userData.angle );
+    if ( child.userData.rotation && animate )
+      child.rotateOnAxis( child.userData.rotation.axis, child.userData.rotation.angle );
+
+    if ( child.userData.translation && animate ) {
+      var v = child.userData.translation.path( child.userData.translation.t );
+      child.position.set( v[0], v[1], v[2] );
+      child.userData.translation.t += child.userData.translation.step;
+    }
 
   } );
 
 }
 
 render();
-controls.update();
-if ( !animate ) render();
 
 </script>
 

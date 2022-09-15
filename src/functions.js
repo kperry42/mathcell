@@ -246,11 +246,16 @@ function colorFromHue( h ) {
 
 function colorFromArg( x ) {
 
+  if ( !( typeof x === 'object' && 're' in x ) ) // from Math
+    x = { re: x, im: 0 };
+
   var h = Math.atan2( x.im, x.re ) / Math.PI / 2;
 
   return colorFromHue(h);
 
 }
+
+function colorStringFromHue( h ) { return `hsl(${360*h},100%,50%)`; }
 
 function colorToHexString( color ) {
 
